@@ -1,0 +1,15 @@
+langchain
+langchain-community
+langchain-anthropic
+langchain-huggingface
+langchain-chroma
+chromadb
+sentence-transformers
+pypdf
+streamlit
+python-dotenv
+python-docx
+unstructured
+docx2txt
+langchain-text-splitters
+langchain-google-genai
