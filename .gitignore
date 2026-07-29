@@ -6,6 +6,7 @@ vectordb/
 .env
 .venv/
 .vscode/
+answer_cache.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

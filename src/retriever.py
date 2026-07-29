@@ -2,59 +2,83 @@
 Runtime retrieval: given a question, find the most relevant chunks.
 """
 
-from chromadb.types import C
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from torch import embedding
-from transformers import model_addition_debugger_context
 
 import config
 
+# Cache the vector store so it is loaded only once
+_vectordb = None
+
+
 def get_vectorstore():
-    """Load the persisted vectorstore from disk"""
+    """Load the persisted vectorstore from disk."""
 
-    embeddings = HuggingFaceEmbeddings(model_name=config.EMBEDDING_MODEL)
+    global _vectordb
 
-    return Chroma(
-        collection_name=config.COLLECTION_NAME,
-        embedding_function=embeddings,
-        persist_directory=str(config.VECTOR_DB_DIR),
-    )
+    if _vectordb is None:
+        embeddings = HuggingFaceEmbeddings(
+            model_name=config.EMBEDDING_MODEL
+        )
 
-def retrieve(query:str, k:int = None):
-    """Return the top k most similar chunks with their similarity scores."""
+        _vectordb = Chroma(
+            collection_name=config.COLLECTION_NAME,
+            embedding_function=embeddings,
+            persist_directory=str(config.VECTOR_DB_DIR),
+        )
+
+    return _vectordb
+
+
+def retrieve(query: str, k: int = None):
+    """
+    Return the top-k most similar chunks with their distances.
+
+    Lower distance = more similar.
+    """
 
     k = k or config.TOP_K
     vectordb = get_vectorstore()
 
-    '''similarity_search_with_score returns a list of tuples (Document, score/distances)
-    Inside the func:
-    Chroma calls embeddings.embed_query(question)
-    Question → vector
-    Compare against stored vectors
-    Rank by similarity
-    Return top-k documents '''
-
-    results = vectordb.similarity_search_with_score(query, k=k)
+    # Returns List[(Document, distance)]
+    results = vectordb.similarity_search_with_score(
+        query=query,
+        k=k,
+    )
 
     if not results:
         return [], False
+
+    # Best match distance
     best_distance = results[0][1]
+
+    # Decide whether the question is inside the knowledge base
     in_scope = best_distance <= config.DISTANCE_THRESHOLD
 
     return results, in_scope
 
-'''Main Function for testing the retriever.'''
+
 if __name__ == "__main__":
-    question = "What is threshold and quota in URR handling?"
+
+    question = "For NR band n104, what maximum output power is specified?"
+
     hits, in_scope = retrieve(question)
 
-    print(f"\nQuery : {question}\n")
-    print(f"In scope: {in_scope}\n")
+    print("\n" + "=" * 80)
+    print(f"Query: {question}")
+    print("=" * 80)
 
-    for i, (doc, score) in enumerate(hits):
-        # Lower distance = more similar
-        print(f"--- Result {i} | distance={score:.4f} | {doc.metadata.get('source_file')} ---")
-        # Take characters from index 0 up to (but not including) index 400.
-        print(doc.page_content[:400].replace("\n", " "))
+    for i, (doc, score) in enumerate(hits, start=1):
+
+        print(f"\nResult {i}")
+        print("-" * 60)
+        print(f"Distance     : {score:.4f}")
+        print(f"Source File  : {doc.metadata.get('source_file')}")
+        print(f"Content Type : {doc.metadata.get('content_type')}")
+        print(f"Heading      : {doc.metadata.get('heading', 'N/A')}")
+        print(f"Table Index  : {doc.metadata.get('table_index', '-')}")
+        print(f"Row Index    : {doc.metadata.get('row_index', '-')}")
         print()
+
+        print(doc.page_content[:700])
+        print("-" * 60)

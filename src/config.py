@@ -13,9 +13,9 @@ CHUNK_OVERLAP = 120 #~15% overlap for context retention
 EMBEDDING_MODEL =  "sentence-transformers/all-MiniLM-L6-v2"
 
 #---RETRIEVAL---
-TOP_K = 8    #chunks to feed into LLM
+TOP_K = 12    #chunks to feed into LLM
 
 #---COLLECTION---
 COLLECTION_NAME = "telecom_specs"
 
-DISTANCE_THRESHOLD = 0.95   # above this, treat as out-of-scope
+DISTANCE_THRESHOLD = 1.05   # above this, treat as out-of-scope

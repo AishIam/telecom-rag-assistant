@@ -6,10 +6,16 @@ import enum
 import os
 import re
 from dotenv import load_dotenv
+#from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 import config
 from retriever import retrieve
+
+from cache import get_cached, set_cached
+
+MODEL_NAME = "gemini-3.6-flash"
+PROMPT_VERSION = "v2"   # bump this whenever you change SYSTEM_PROMPT
 
 load_dotenv()
 
@@ -73,7 +79,7 @@ def answer(question: str):
     is_capability_q = any(t in cleaned for t in capability_triggers)
 
     if cleaned in greetings or is_capability_q or len(cleaned) < 5:
-        yield {"type": "final",
+        return {"type": "final",
                "text": "👋 I'm a telecom specifications assistant. I answer questions "
                        "about 3GPP 5G NR specs (TS 38.101-1) — for example: UE power "
                        "classes, maximum output power, emission limits, or transmit "
@@ -85,7 +91,7 @@ def answer(question: str):
     hits, in_scope = retrieve(question)
 
     if not in_scope:
-        yield {
+        return {
             "type": "final",
             "text": "I could not find this in the indexed specifications. "
                     "This question appears to be outside the scope of the "
@@ -102,10 +108,12 @@ Question: {question}
 
 Answer using only the context above."""
 
-    llm = ChatGoogleGenerativeAI(
-        model = "gemini-3.6-flash"
-    )
+    # --- Check cache before calling the API ---
+    cached = get_cached(question, MODEL_NAME, PROMPT_VERSION)
+    if cached is not None:
+        return cached
 
+    llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
     response = llm.invoke([
         ("system", SYSTEM_PROMPT),
         ("human", user_message),
@@ -114,11 +122,14 @@ Answer using only the context above."""
     answer_text = _extract_text(response)
     sources = sorted({doc.metadata.get("source_file", "unknown") for doc, _ in hits})
 
-    return{
+    result = {
         "answer": answer_text,
         "sources": sources,
-        "in_scope": True
+        "in_scope": True,
     }
+
+    set_cached(question, MODEL_NAME, PROMPT_VERSION, result)   # save for next time
+    return result
 
 def answer_stream(question: str):
     """
@@ -152,7 +163,7 @@ def answer_stream(question: str):
     
     # --- Normal RAG pipeline below ---
     hits, in_scope = retrieve(question)
-    
+
     if not in_scope:
         yield {"type": "final",
                "text": "I could not find this in the indexed specifications. "
@@ -169,9 +180,9 @@ Question: {question}
 
 Answer using only the context above."""
 
-    llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", temperature=0)
+    llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
 
-    # Stream tokens as they arrive
+    # Stream tokens as they arrivepython
     for chunk in llm.stream([
         ("system", SYSTEM_PROMPT),
         ("human", user_message),

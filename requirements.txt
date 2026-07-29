@@ -9,7 +9,9 @@ pypdf
 streamlit
 python-dotenv
 python-docx
+docx2txt
 unstructured
 docx2txt
 langchain-text-splitters
+#langchain-groq
 langchain-google-genai
