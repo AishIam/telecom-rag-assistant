@@ -38,6 +38,7 @@ for msg in st.session_state.messages:
         if msg.get("sources"):
             st.caption("Sources: " + ", ".join(f"`{s}`" for s in msg["sources"]))
 
+
 # --- Shared handler so both example buttons and chat input use the same logic ---
 def handle_query(prompt):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -49,18 +50,26 @@ def handle_query(prompt):
         full_text = ""
         sources = []
 
-        for event in answer_stream(prompt):
-            if event["type"] == "token":
-                full_text += event["text"]
-                placeholder.markdown(full_text + "▌")
-            elif event["type"] == "final":
-                full_text = event["text"]
-                sources = event.get("sources", [])
-                placeholder.markdown(full_text)
-            elif event["type"] == "sources":
-                sources = event["sources"]
+        try:
+            for event in answer_stream(prompt):
+                if event["type"] == "token":
+                    full_text += event["text"]
+                    placeholder.markdown(full_text + "▌")
+                elif event["type"] == "final":
+                    full_text = event["text"]
+                    sources = event.get("sources", [])
+                    placeholder.markdown(full_text)
+                elif event["type"] == "sources":
+                    sources = event["sources"]
 
-        placeholder.markdown(full_text)
+            placeholder.markdown(full_text)
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                full_text = "⚠️ API rate limit reached. Please try again later."
+            else:
+                full_text = f"⚠️ An error occurred: {str(e)[:200]}"
+            placeholder.markdown(full_text)
+
         if sources:
             st.caption("Sources: " + ", ".join(f"`{s}`" for s in sources))
 
@@ -82,35 +91,8 @@ if not st.session_state.messages:
         if col.button(ex, use_container_width=True):
             handle_query(ex)
             st.rerun()
-            
-# Chat input (renders bar with send arrow, submits on Enter)
+
+# --- Chat input with send button, submits on Enter ---
 if prompt := st.chat_input("Ask about 5G NR specs..."):
-    # Show user message
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    # Stream assistant response
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full_text = ""
-        sources = []
-
-        for event in answer_stream(prompt):
-            if event["type"] == "token":
-                full_text += event["text"]
-                placeholder.markdown(full_text + "▌")   # cursor while streaming
-            elif event["type"] == "final":
-                full_text = event["text"]
-                sources = event.get("sources", [])
-                placeholder.markdown(full_text)
-            elif event["type"] == "sources":
-                sources = event["sources"]
-
-        placeholder.markdown(full_text)  # final render without cursor
-        if sources:
-            st.caption("Sources: " + ", ".join(f"`{s}`" for s in sources))
-
-    st.session_state.messages.append({
-        "role": "assistant", "content": full_text, "sources": sources
-    })
+    handle_query(prompt)
+    st.rerun()
