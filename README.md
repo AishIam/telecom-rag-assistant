@@ -147,5 +147,11 @@ app.py            # Streamlit chat UI
 
 ---
 
+## Demo
+
+![In-scope answer](screenshots/in_scope_1.png, screenshots/in_scope_2.png)
+![Out-of-scope refusal](screenshots/out_of_scope_1.png, screenshots/out_of_scope_2.png)
+---
+
 *Built as a hands-on exploration of production RAG concerns: retrieval quality, grounding,
 scope control, evaluation methodology, and cost management.*

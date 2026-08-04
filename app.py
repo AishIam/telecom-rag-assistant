@@ -83,7 +83,7 @@ if not st.session_state.messages:
     st.markdown("**Try one of these:**")
     examples = [
         "What are the UE power classes defined in the spec?",
-        "What is the maximum output power for a UE in FR1?",
+        "What are the five properties of a trustworthy 5G system?",
         "What is the transmit power for power class 3?",
     ]
     cols = st.columns(len(examples))
