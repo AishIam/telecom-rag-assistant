@@ -5,13 +5,14 @@ Generation: take retrieved chunks + question, produce a grounded answer.
 import os
 import re
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+#from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 
 import config
 from retriever import retrieve
 from cache import get_cached, set_cached
 
-MODEL_NAME = "gemini-3.6-flash"
+MODEL_NAME = "openai/gpt-oss-120b"
 PROMPT_VERSION = "v2"   # bump this whenever you change SYSTEM_PROMPT
 
 load_dotenv()
@@ -128,7 +129,7 @@ Answer using only the context above."""
     if cached is not None:
         return cached
 
-    llm = ChatGoogleGenerativeAI(model=MODEL_NAME)
+    llm = ChatGroq(model=MODEL_NAME)
     response = llm.invoke([
         ("system", SYSTEM_PROMPT),
         ("human", user_message),
@@ -172,7 +173,7 @@ Question: {question}
 
 Answer using only the context above."""
 
-    llm = ChatGoogleGenerativeAI(model=MODEL_NAME)
+    llm = ChatGroq(model=MODEL_NAME)
 
     # Stream tokens as they arrive
     for chunk in llm.stream([
@@ -188,7 +189,7 @@ Answer using only the context above."""
 
 
 if __name__ == "__main__":
-    q = "What is the maximum output power for a UE in FR1?"
+    q = "What is the PFCP Session Establishment procedure?"
     result = answer(q)
 
     print(f"\nQ: {q}\n")
